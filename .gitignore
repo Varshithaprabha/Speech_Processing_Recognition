@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# sign_service: large or automatically re-downloaded files
+sign_service/data/old_v1/
+sign_service/data/include_videos/
+sign_service/data/zips/
+sign_service/data/webcam_videos/
+sign_service/data/meta/data/
+sign_service/data/meta/.cache/
+sign_service/data/meta/zenodo.json
+sign_service/data/fetch_log.txt
+sign_service/models/mediapipe/
+*.part

@@ -1,0 +1,92 @@
+{
+  "BAD": {
+    "video": "BAD.mp4",
+    "landmarks": "BAD.json",
+    "duration": 1.87
+  },
+  "DOCTOR": {
+    "video": "DOCTOR.mp4",
+    "landmarks": "DOCTOR.json",
+    "duration": 1.93
+  },
+  "FAMILY": {
+    "video": "FAMILY.mp4",
+    "landmarks": "FAMILY.json",
+    "duration": 1.8
+  },
+  "FATHER": {
+    "video": "FATHER.mp4",
+    "landmarks": "FATHER.json",
+    "duration": 1.73
+  },
+  "GOOD": {
+    "video": "GOOD.mp4",
+    "landmarks": "GOOD.json",
+    "duration": 2.47
+  },
+  "HELLO": {
+    "video": "HELLO.mp4",
+    "landmarks": "HELLO.json",
+    "duration": 2.13
+  },
+  "HOSPITAL": {
+    "video": "HOSPITAL.mp4",
+    "landmarks": "HOSPITAL.json",
+    "duration": 2.73
+  },
+  "HOT": {
+    "video": "HOT.mp4",
+    "landmarks": "HOT.json",
+    "duration": 1.93
+  },
+  "HOW-ARE-YOU": {
+    "video": "HOW-ARE-YOU.mp4",
+    "landmarks": "HOW-ARE-YOU.json",
+    "duration": 3.07
+  },
+  "ME": {
+    "video": "ME.mp4",
+    "landmarks": "ME.json",
+    "duration": 1.73
+  },
+  "MEDICINE": {
+    "video": "MEDICINE.mp4",
+    "landmarks": "MEDICINE.json",
+    "duration": 2.27
+  },
+  "MOTHER": {
+    "video": "MOTHER.mp4",
+    "landmarks": "MOTHER.json",
+    "duration": 1.67
+  },
+  "SICK": {
+    "video": "SICK.mp4",
+    "landmarks": "SICK.json",
+    "duration": 2.33
+  },
+  "THANK-YOU": {
+    "video": "THANK-YOU.mp4",
+    "landmarks": "THANK-YOU.json",
+    "duration": 1.8
+  },
+  "TODAY": {
+    "video": "TODAY.mp4",
+    "landmarks": "TODAY.json",
+    "duration": 2.07
+  },
+  "TOMORROW": {
+    "video": "TOMORROW.mp4",
+    "landmarks": "TOMORROW.json",
+    "duration": 1.8
+  },
+  "YESTERDAY": {
+    "video": "YESTERDAY.mp4",
+    "landmarks": "YESTERDAY.json",
+    "duration": 1.6
+  },
+  "YOU": {
+    "video": "YOU.mp4",
+    "landmarks": "YOU.json",
+    "duration": 1.53
+  }
+}

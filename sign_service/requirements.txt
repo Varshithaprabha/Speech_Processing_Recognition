@@ -1,0 +1,12 @@
+mediapipe>=0.10.30
+opencv-python
+numpy
+pandas
+torch
+fastapi
+uvicorn
+requests
+huggingface_hub
+pyarrow
+matplotlib
+python-multipart

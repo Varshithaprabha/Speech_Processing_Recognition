@@ -1,0 +1,95 @@
+{
+  "_comment": "Chosen INCLUDE words for the hospital demo. 'include_label' must match the label column of the ai4bharat/INCLUDE metadata exactly. 'gloss' is what sign_service sends to the rest of the app. Remove words here (and retrain) if accuracy is shaky.",
+  "words": [
+    {
+      "gloss": "HELLO",
+      "category": "Greetings",
+      "include_label": "48. Hello"
+    },
+    {
+      "gloss": "HOW-ARE-YOU",
+      "category": "Greetings",
+      "include_label": "49. How are you"
+    },
+    {
+      "gloss": "THANK-YOU",
+      "category": "Greetings",
+      "include_label": "55. Thank you"
+    },
+    {
+      "gloss": "ME",
+      "category": "Pronouns",
+      "include_label": "40. I"
+    },
+    {
+      "gloss": "YOU",
+      "category": "Pronouns",
+      "include_label": "41. you"
+    },
+    {
+      "gloss": "DOCTOR",
+      "category": "Jobs",
+      "include_label": "87. Doctor"
+    },
+    {
+      "gloss": "HOSPITAL",
+      "category": "Places",
+      "include_label": "30. Hospital"
+    },
+    {
+      "gloss": "SICK",
+      "category": "Adjectives",
+      "include_label": "98. sick"
+    },
+    {
+      "gloss": "HOT",
+      "category": "Adjectives",
+      "include_label": "87. hot"
+    },
+    {
+      "gloss": "GOOD",
+      "category": "Adjectives",
+      "include_label": "94. good"
+    },
+    {
+      "gloss": "BAD",
+      "category": "Adjectives",
+      "include_label": "95. bad"
+    },
+    {
+      "gloss": "MEDICINE",
+      "category": "Society",
+      "include_label": "3. Medicine"
+    },
+    {
+      "gloss": "TODAY",
+      "category": "Days_and_Time",
+      "include_label": "73. Today"
+    },
+    {
+      "gloss": "TOMORROW",
+      "category": "Days_and_Time",
+      "include_label": "74. Tomorrow"
+    },
+    {
+      "gloss": "YESTERDAY",
+      "category": "Days_and_Time",
+      "include_label": "75. Yesterday"
+    },
+    {
+      "gloss": "MOTHER",
+      "category": "People",
+      "include_label": "60. Mother"
+    },
+    {
+      "gloss": "FATHER",
+      "category": "People",
+      "include_label": "61. Father"
+    },
+    {
+      "gloss": "FAMILY",
+      "category": "People",
+      "include_label": "68. Family"
+    }
+  ]
+}
