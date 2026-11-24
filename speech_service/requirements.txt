@@ -1,0 +1,11 @@
+httpx               # Groq + Ollama calls
+fastapi
+uvicorn
+websockets>=13
+python-multipart
+python-dotenv
+numpy
+# optional
+faster-whisper      # speech-to-text (en/hi/te); service runs without it, text input still works
+edge-tts            # /tts endpoint (online); Part C can use browser speechSynthesis instead
+anthropic>=2.0      # only if you list "anthropic" in LLM_PROVIDERS (paid)

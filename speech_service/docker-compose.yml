@@ -1,0 +1,24 @@
+# docker compose up --build        (from speech_service/)
+# sign_service runs on the Windows host (port 8001); the container reaches it via host.docker.internal.
+services:
+  speech:
+    build: .
+    image: signbridge-speech
+    ports:
+      - "8002:8002"
+    env_file:
+      - path: .env              # ANTHROPIC_API_KEY etc. (optional)
+        required: false
+    environment:
+      SIGN_WS_URL: ws://host.docker.internal:8001/ws
+      OLLAMA_URL: http://host.docker.internal:11434     # Ollama runs on Windows
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+    volumes:
+      - ../sign_service/clips:/clips:ro     # avatar clip index (read-only)
+      - whisper-cache:/cache                # Whisper model, downloaded once
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  whisper-cache:

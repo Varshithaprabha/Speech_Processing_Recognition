@@ -9,7 +9,7 @@ and an emergency SOS mode cover moments when signing isn't practical.
 | Part | Folder | Owner |
 |---|---|---|
 | A: Vision & Sign Recognition | [`sign_service/`](sign_service/) | Varsh |
-| B: Speech, Language & AI | _to be added_ | Roshni |
+| B: Speech, Language & AI | [`speech_service/`](speech_service/) | Roshni |
 | C: App, Avatar & Integration | _to be added_ | Indrasena Reddy |
 
 All parts exchange the same JSON message over WebSocket:
