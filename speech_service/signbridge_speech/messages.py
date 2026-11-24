@@ -1,14 +1,20 @@
-"""Shared message format, Part B side.
+"""Shared message format (section 6 of the project doc), Part B side.
 
-Signer -> hearing (gloss from sign_service, `sentence` filled in by Part B):
-  {"from":"signer","type":"gloss","content":"ME HOT YESTERDAY TODAY",
-   "sentence":"I've had a fever since yesterday.", "sentence_en": "...", "language":"en",
-   "emotion":"neutral","confidence":0.89,"timestamp":"...","source":"groq"}      # source: groq / ollama / anthropic / rules
+  {"from": "signer | speaker", "type": "gloss | text | speech_partial | alert", "content": ..., "sentence": ...,
+   "language": "en | hi | te", "emotion": "neutral | happy | angry | urgent | question",
+   "confidence": 0.92, "timestamp": "2026-11-23T22:56:00+05:30"}
 
-Hearing -> signer (speech or typed text from Part C):
-  {"from":"hearing","type":"speech","content":"<what was said, original language>",
-   "sentence":"<English caption>","gloss":"DOCTOR TOMORROW","language":"hi","emotion":"question",
-   "confidence":0.93,"timestamp":"...","clips":[{"gloss":"DOCTOR","video":"DOCTOR.mp4"}, ...]}
+Signer, gloss from sign_service with `sentence` filled in by Part B:
+  {"from":"signer","type":"gloss","content":"ME HOT YESTERDAY TODAY","sentence":"I've had a fever since yesterday.",
+   "sentence_en":"...", "source":"groq"}                                   source: groq / ollama / anthropic / rules
+Signer taps a phrase or a suggestion:  {"from":"signer","type":"text","content":"<English>","sentence":"<listener language>","kind":"quick_reply|suggestion"}
+Signer SOS:                            {"from":"signer","type":"alert","content":"SOS","sentence":"Emergency! ...","emotion":"urgent"}
+Speaker live caption:                  {"from":"speaker","type":"speech_partial","content":"Do you have","sentence":"Do you have"}
+Speaker final:  {"from":"speaker","type":"text","content":"<as said>","sentence":"<English caption>","language":"te",
+                 "emotion":"question","gloss":"YESTERDAY YOU HOT","clips":[{"gloss":"YESTERDAY","video":"YESTERDAY.mp4",...}]}
+Additions (like Part A's gloss_partial/status), from "system":
+  {"type":"suggestions","suggestions":[{"id":"s1","text_en":"Yes, I have a fever.","text":"అవును, నాకు జ్వరం ఉంది."}, ...]}
+  {"type":"summary","content":"<summary>","key_points":[...],"transcript":[...]}
 """
 from __future__ import annotations
 
