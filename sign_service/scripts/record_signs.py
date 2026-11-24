@@ -7,7 +7,7 @@
 For every word the window shows the INCLUDE reference video (left) so people who do
 not know ISL can copy the sign, and your camera with the detected skeleton (right).
 
-Keys:  SPACE  record one clip (3-2-1 countdown, then ~2.5 s; press SPACE again to stop early)
+Keys:  SPACE  record one clip (3-2-1 countdown, then ~3.5 s; press SPACE again to stop early)
        R      delete the last clip of this word      N / P  next / previous word
        Q/ESC  quit (everything recorded so far is kept)
 
@@ -30,7 +30,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from signbridge_sign import config  # noqa: E402
 from signbridge_sign.landmarks import Landmarker, draw  # noqa: E402
 
-H = 480
+H = 400                      # panel height; window is resizable too
+WIN = "SignBridge - record signs"
 
 
 def reference_frames(gloss: str, max_frames: int = 90) -> list[np.ndarray]:
@@ -52,6 +53,10 @@ def reference_frames(gloss: str, max_frames: int = 90) -> list[np.ndarray]:
                 ok, f = cap.read()
                 if not ok:
                     break
+                h, w = f.shape[:2]
+                if w > h:                       # INCLUDE is a wide studio shot: keep the centred signer
+                    x0 = (w - h) // 2
+                    f = f[:, x0:x0 + h]
                 frames.append(cv2.resize(f, (int(f.shape[1] * H / f.shape[0]), H)))
             cap.release()
             if frames:
@@ -68,7 +73,7 @@ def main():
     ap.add_argument("--signer", required=True, help="your name, e.g. varsh")
     ap.add_argument("--clips", type=int, default=5, help="target clips per word")
     ap.add_argument("--words", default="", help="comma-separated subset of glosses")
-    ap.add_argument("--seconds", type=float, default=2.5)
+    ap.add_argument("--seconds", type=float, default=3.5)
     ap.add_argument("--camera", type=int, default=0)
     ap.add_argument("--no-video", action="store_true", help="save only landmarks (no .mp4 copy)")
     args = ap.parse_args()
@@ -85,6 +90,8 @@ def main():
     if not cap.isOpened():
         sys.exit(f"Cannot open camera {args.camera}")
     lm = Landmarker()
+    cv2.namedWindow(WIN, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(WIN, 1100, 470)
     wi = next((i for i, w in enumerate(words) if len(existing(signer, w)) < args.clips), 0)
     ref, ref_for, ri = [], None, 0
     state, t_state, rec_frames, rec_kp = "ready", 0.0, [], []
@@ -149,7 +156,7 @@ def main():
                     (0, 0, 255) if state == "recording" else (180, 255, 180), 2)
         if state == "recording":
             cv2.circle(view, (view.shape[1] - 30, 30), 12, (0, 0, 255), -1)
-        cv2.imshow("SignBridge - record signs", np.vstack([bar, view]))
+        cv2.imshow(WIN, np.vstack([bar, view]))
 
         k = cv2.waitKey(1) & 0xFF
         if k in (ord("q"), 27):

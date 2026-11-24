@@ -50,7 +50,7 @@ MOCK_SENTENCES = [
     (["HELLO"], "neutral"),
     (["ME", "SICK"], "neutral"),
     (["ME", "HOT", "YESTERDAY", "TODAY"], "neutral"),
-    (["DOCTOR", "YOU"], "question"),
+    (["DOCTOR", "HOSPITAL"], "question"),
     (["MEDICINE", "GOOD"], "neutral"),
     (["MOTHER", "FATHER", "FAMILY"], "urgent"),
     (["THANK-YOU"], "happy"),

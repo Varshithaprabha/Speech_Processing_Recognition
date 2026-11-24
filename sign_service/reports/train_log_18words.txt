@@ -1,0 +1,59 @@
+18 classes | train 694 (webcam 152) | val 49 | test 89
+epoch   5  loss 1.965  val acc 59.2%  (15s)
+epoch  10  loss 1.078  val acc 77.6%  (30s)
+epoch  15  loss 0.911  val acc 87.8%  (46s)
+epoch  20  loss 0.784  val acc 89.8%  (61s)
+epoch  25  loss 0.823  val acc 89.8%  (76s)
+epoch  30  loss 0.745  val acc 91.8%  (91s)
+epoch  35  loss 0.760  val acc 89.8%  (106s)
+epoch  40  loss 0.797  val acc 95.9%  (121s)
+epoch  45  loss 0.704  val acc 91.8%  (137s)
+epoch  50  loss 0.691  val acc 95.9%  (152s)
+epoch  55  loss 0.693  val acc 98.0%  (167s)
+epoch  60  loss 0.657  val acc 98.0%  (182s)
+epoch  65  loss 0.627  val acc 95.9%  (197s)
+epoch  70  loss 0.636  val acc 100.0%  (212s)
+epoch  75  loss 0.623  val acc 98.0%  (227s)
+epoch  80  loss 0.655  val acc 95.9%  (243s)
+epoch  85  loss 0.605  val acc 98.0%  (258s)
+epoch  90  loss 0.624  val acc 95.9%  (273s)
+epoch  95  loss 0.605  val acc 100.0%  (288s)
+epoch 100  loss 0.597  val acc 100.0%  (303s)
+epoch 105  loss 0.601  val acc 100.0%  (318s)
+epoch 110  loss 0.595  val acc 100.0%  (333s)
+epoch 115  loss 0.597  val acc 100.0%  (349s)
+epoch 120  loss 0.592  val acc 100.0%  (364s)
+epoch 125  loss 0.590  val acc 100.0%  (379s)
+epoch 130  loss 0.592  val acc 100.0%  (394s)
+epoch 135  loss 0.591  val acc 100.0%  (409s)
+epoch 140  loss 0.591  val acc 100.0%  (424s)
+epoch 145  loss 0.590  val acc 100.0%  (439s)
+epoch 150  loss 0.590  val acc 100.0%  (454s)
+
+Results (best checkpoint by validation accuracy):
+  val            acc 100.0%  top-3 100.0%  (n=49)
+  test_all       acc  93.3%  top-3  98.9%  (n=89)
+  test_include   acc  91.8%  top-3  98.0%  (n=49)
+  test_webcam    acc  95.0%  top-3 100.0%  (n=40)
+
+Per-word accuracy on test_webcam (worst first) - drop the weakest if the demo is shaky:
+  YOU          33%
+  HELLO        100%
+  HOW-ARE-YOU  100%
+  THANK-YOU    100%
+  ME           100%
+  DOCTOR       100%
+  HOSPITAL     100%
+  SICK         100%
+  HOT          100%
+  GOOD         100%
+  BAD          100%
+  MEDICINE     100%
+  TODAY        100%
+  TOMORROW     100%
+  YESTERDAY    100%
+  MOTHER       100%
+  FATHER       100%
+  FAMILY       100%
+
+Saved C:\Projects\SPR_Project\sign_service\models\sign_classifier.pt and reports in C:\Projects\SPR_Project\sign_service\reports

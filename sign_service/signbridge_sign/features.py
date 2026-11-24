@@ -28,8 +28,8 @@ FEAT_DIM = 26 + 84 + 84 + 2 + 110
 def _split(raw: np.ndarray):
     T = raw.shape[0]
     pose = raw[:, POSE_SL].reshape(T, 33, 4)[:, :, :2]
-    lh = raw[:, LH_SL].reshape(T, 21, 3)[:, :, :2]
-    rh = raw[:, RH_SL].reshape(T, 21, 3)[:, :, :2]
+    lh = raw[:, LH_SL].reshape(T, 21, 3)
+    rh = raw[:, RH_SL].reshape(T, 21, 3)
     return pose, lh, rh
 
 
@@ -71,13 +71,25 @@ def _ffill(a: np.ndarray, max_gap: int = 4) -> np.ndarray:
     return a
 
 
-def trim_to_activity(raw: np.ndarray, margin: int = 2) -> np.ndarray:
-    """Drop leading/trailing frames where the signer's hands are at rest."""
+def trim_to_activity(raw: np.ndarray, margin: int = 2, max_gap: int = 4) -> np.ndarray:
+    """Keep the main sign: the longest stretch with hands raised (short dips of up to
+    max_gap frames are bridged). Drops rest frames and stray movements such as
+    reaching for the keyboard at the end of a recording."""
     act = raised(raw)
     if act.sum() < 3:
         return raw
-    idx = np.where(act)[0]
-    return raw[max(0, idx[0] - margin): idx[-1] + 1 + margin]
+    runs, start, last = [], None, None
+    for t in np.where(act)[0]:
+        if start is None:
+            start = last = t
+        elif t - last <= max_gap + 1:
+            last = t
+        else:
+            runs.append((start, last))
+            start = last = t
+    runs.append((start, last))
+    s, e = max(runs, key=lambda r: r[1] - r[0])
+    return raw[max(0, s - margin): e + 1 + margin]
 
 
 def resample(x: np.ndarray, n: int = SEQ_LEN) -> np.ndarray:
@@ -91,8 +103,9 @@ def resample(x: np.ndarray, n: int = SEQ_LEN) -> np.ndarray:
 def frame_features(raw: np.ndarray) -> np.ndarray:
     """(T, 258) raw -> (T, FEAT_DIM) normalised features. NaNs become 0."""
     raw = raw.astype(np.float32)
-    pose, lh, rh = _split(raw)
-    lh, rh = _ffill(lh), _ffill(rh)
+    pose, lh3, rh3 = _split(raw)
+    lh3, rh3 = _ffill(lh3), _ffill(rh3)
+    lh, rh = lh3[:, :, :2], rh3[:, :, :2]
     T = raw.shape[0]
 
     ls, rs = pose[:, 11], pose[:, 12]

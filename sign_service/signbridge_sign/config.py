@@ -39,4 +39,10 @@ def load_vocab() -> list[dict]:
 
 
 def glosses() -> list[str]:
+    """Words the classifier recognises (vocab entries with "recognize": false are skipped)."""
+    return [w["gloss"] for w in load_vocab() if w.get("recognize", True)]
+
+
+def all_glosses() -> list[str]:
+    """Every word with an avatar clip, including ones that are not recognised."""
     return [w["gloss"] for w in load_vocab()]

@@ -9,14 +9,18 @@ camera ─► MediaPipe Holistic (pose + both hands) ─► shoulder-normalised 
        ─► segmenter (hands up/down, pauses) ─► BiGRU classifier ─► {"type":"gloss","content":"ME SICK TODAY",...}
 ```
 
-## Vocabulary (18 words, in `vocab.json`)
+## Vocabulary (17 recognised words + 1 avatar-only, in `vocab.json`)
 
-HELLO, HOW-ARE-YOU, THANK-YOU, ME, YOU, DOCTOR, HOSPITAL, SICK, HOT, GOOD, BAD, MEDICINE,
+HELLO, HOW-ARE-YOU, THANK-YOU, ME, DOCTOR, HOSPITAL, SICK, HOT, GOOD, BAD, MEDICINE,
 TODAY, TOMORROW, YESTERDAY, MOTHER, FATHER, FAMILY
+
+**YOU** is not recognised: it was confused with ME in every test (both are pointing signs; the camera can't
+reliably tell "towards the camera" from "towards yourself"). Its clip is kept in `clips/` so the avatar can
+still sign YOU to the Deaf user.
 
 These were chosen for the hospital demo. INCLUDE-50 has no medical words, so we use the full INCLUDE
 set (263 words). Example sentences: `HELLO` · `ME SICK YESTERDAY TODAY` · `ME HOT` (fever) ·
-`DOCTOR YOU?` · `MEDICINE GOOD` · `MOTHER FATHER FAMILY` · `THANK-YOU`.
+`DOCTOR HOSPITAL?` · `MEDICINE GOOD` · `MOTHER FATHER FAMILY` · `THANK-YOU`.
 To change words, edit `vocab.json` (use labels from `data/meta/include_meta_raw.csv`) and re-run the steps.
 
 ## Setup

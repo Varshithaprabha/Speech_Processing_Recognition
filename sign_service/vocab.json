@@ -1,5 +1,5 @@
 {
-  "_comment": "Chosen INCLUDE words for the hospital demo. 'include_label' must match the label column of the ai4bharat/INCLUDE metadata exactly. 'gloss' is what sign_service sends to the rest of the app. Remove words here (and retrain) if accuracy is shaky.",
+  "_comment": "Chosen INCLUDE words for the hospital demo. 'include_label' must match the label column of the ai4bharat/INCLUDE metadata exactly. 'gloss' is what sign_service sends to the rest of the app. Remove words here (and retrain) if accuracy is shaky. Words with \"recognize\": false are not trained or recognised, but keep their avatar clip.",
   "words": [
     {
       "gloss": "HELLO",
@@ -24,7 +24,9 @@
     {
       "gloss": "YOU",
       "category": "Pronouns",
-      "include_label": "41. you"
+      "include_label": "41. you",
+      "recognize": false,
+      "note": "Dropped from the classifier on Day 1: confused with ME (both are pointing signs). Clip kept for the avatar."
     },
     {
       "gloss": "DOCTOR",
