@@ -2,7 +2,7 @@
 
 Sits between Part A (`sign_service`, port 8001) and Part C (the app). It is the speech service and the
 language service in one FastAPI process on port 8002. **Part C only needs to connect to
-`ws://localhost:8002/ws`.**
+`ws://localhost:8002/ws`.** Report section for Part B: [REPORT.md](REPORT.md).
 
 ```
 Signer:   sign_service ──gloss "ME HOT YESTERDAY TODAY"──► AI / rules ──► "I've had a fever since yesterday." ──► Part C (+ TTS)
