@@ -193,10 +193,18 @@ HAPPY = r"\b(thank|thanks|great|congratulations|good news|happy|recovered)\b"
 QUESTION = r"\?\s*$|^(what|when|where|why|how|who|which|do|does|did|is|are|can|could|will|have|has|should)\b"
 
 
+ANGRY = (r"\b(angry|stupid|nonsense|shut up|how dare|ridiculous|unacceptable|idiot|useless|fed up|"
+         r"what is wrong with you|stop wasting|bakwas|pagal|gussa|kopam)\b")
+
+
 def tone(text: str) -> str:
     t = text.lower().strip()
     if re.search(URGENT, t):
         return "urgent"
+    letters = [c for c in text if c.isalpha() and c.isascii()]
+    shouting = len(letters) >= 8 and sum(c.isupper() for c in letters) / len(letters) > 0.7
+    if re.search(ANGRY, t) or shouting or "!!" in t:
+        return "angry"
     if re.search(QUESTION, t):
         return "question"
     if re.search(HAPPY, t):
@@ -232,3 +240,46 @@ def text_to_gloss(text: str, allowed: set[str]) -> list[str]:
     greet = [g for g in GREETINGS if g in dedup]
     times = [g for g in dedup if g in TIMES]
     return greet + times + [g for g in dedup if g not in TIMES and g not in GREETINGS]
+
+
+# ---------------------------------------------------------------- smart replies & summary (offline)
+
+def suggest_replies(last_speaker_msg: dict | None) -> list[str]:
+    """3-4 replies for the Deaf user to tap, from the tone and signs of what the speaker just said."""
+    if not last_speaker_msg:
+        return ["Hello.", "I am Deaf. Please be patient with me.", "Please write it down for me.", "Thank you."]
+    gloss = set(last_speaker_msg.get("gloss", "").split())
+    emo = last_speaker_msg.get("emotion", "neutral")
+    if emo == "urgent":
+        return ["Okay, I understand.", "Please help me.", "Please call my family.", "Please say that again."]
+    if emo == "question":
+        out = []
+        if "HOT" in gloss:
+            out += ["Yes, I have a fever.", "No, I don't have a fever."]
+        elif "MEDICINE" in gloss:
+            out += ["Yes, I took my medicine.", "No, I didn't take it."]
+        elif "SICK" in gloss or "BAD" in gloss:
+            out += ["Yes, I feel unwell.", "No, I feel better now."]
+        elif "HOW-ARE-YOU" in gloss:
+            out += ["I'm not feeling well.", "I'm fine, thank you."]
+        else:
+            out += ["Yes.", "No."]
+        return out + ["I don't know.", "Please say that again."]
+    if emo == "angry":
+        return ["I'm sorry.", "Please be patient with me.", "Please write it down for me."]
+    return ["Okay.", "Thank you.", "I don't understand.", "Please write it down for me."]
+
+
+def summarize(lines: list[dict]) -> str:
+    """Plain summary when no AI is available: counts + the most important lines."""
+    if not lines:
+        return "No conversation yet."
+    signed = [l for l in lines if l["from"] == "signer"]
+    spoken = [l for l in lines if l["from"] == "speaker"]
+    urgent = [l["text"] for l in lines if l["emotion"] == "urgent"]
+    parts = [f"Conversation with {len(signed)} message(s) from the Deaf person and {len(spoken)} from the hearing person."]
+    if signed:
+        parts.append("The Deaf person said: " + " ".join(l["text"] for l in signed[:6]))
+    if urgent:
+        parts.append("Urgent: " + " ".join(urgent[:3]))
+    return " ".join(parts)

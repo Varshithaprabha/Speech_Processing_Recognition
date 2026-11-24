@@ -1,26 +1,30 @@
-"""speech_service - Part B's deliverable (Speech, Language & AI).
+"""speech_service - Part B's deliverable (Speech, Language & AI): speech + language service on port 8002.
 
     python service.py                  # connects to sign_service on ws://localhost:8001/ws, serves port 8002
-    python service.py --no-llm         # rules only (no Claude calls)
-    python service.py --no-sign        # don't connect to sign_service (test the hearing side alone)
+    python service.py --no-llm         # rules only (no AI calls)
+    python service.py --no-sign        # don't connect to sign_service (test the speaker side alone)
 
-Part C connects ONLY to ws://localhost:8002/ws and receives everything:
-    from sign_service (forwarded):  gloss_partial, status
-    filled by Part B:               gloss (with `sentence`), quick_reply, sos   (from = "signer")
-    hearing person:                 speech / text (caption + tone + gloss + clips)  (from = "hearing")
+Messages follow section 6 of the project doc. Part C connects ONLY to ws://localhost:8002/ws and receives:
+    from "signer":   gloss (with `sentence` filled in), text (phrase board / suggestion tapped), alert (SOS)
+                     gloss_partial, status   (forwarded unchanged from sign_service)
+    from "speaker":  speech_partial (live caption), text (final caption + tone + gloss + clips for the avatar)
+    from "system":   suggestions (smart quick replies), summary, status
 
 Client -> server JSON commands on /ws:
-    {"cmd":"text", "content":"Did you take your medicine?", "language":"en"}   hearing person typed/spoke
-    {"cmd":"quick_reply", "id":"water"}   {"cmd":"sos"}
-    {"cmd":"set_language", "language":"hi"}       language the hearing person wants to hear
+    {"cmd":"partial", "content":"Do you have", "language":"en"}       live caption (browser speech interim result)
+    {"cmd":"text", "content":"Do you have a fever?", "language":"en"}  speaker's final words (typed or browser STT)
+    {"cmd":"quick_reply", "id":"water"}      phrase board        {"cmd":"quick_reply", "id":"s2"}  smart suggestion
+    {"cmd":"sos"}     {"cmd":"summary"}     {"cmd":"new_conversation"}
+    {"cmd":"set_language", "language":"hi"}       language the speaker wants to hear
     {"cmd":"flush"|"reset"|"pause"|"resume"}       forwarded to sign_service
 
 HTTP:
-    POST /speech   multipart: file=<audio, WAV best>, language=en|hi|te (optional)  -> hearing message
-    POST /text     JSON {"content": "...", "language": "en"}                         -> hearing message
-    POST /gloss    JSON {"content": "ME HOT YESTERDAY TODAY", "emotion": "neutral"}  -> gloss message (testing)
+    POST /speech           multipart file=<audio>, language=en|hi|te (optional)  -> final "text" message
+    POST /speech_partial   same, for audio still being recorded (fast Whisper)    -> "speech_partial" message
+    POST /text   {"content","language"}      POST /gloss {"content","emotion"}   (testing)
+    GET  /suggestions      GET /summary      GET /transcript      GET /quick_replies
     GET  /tts?text=...&language=en&emotion=neutral  -> audio/mpeg
-    GET  /quick_replies    GET /health
+    GET  /health
 """
 from __future__ import annotations
 
@@ -109,6 +113,7 @@ def build_app(args) -> FastAPI:
     hub, conv = Hub(), Conversation()
     if args.no_llm:
         config.USE_LLM = False
+    background: set[asyncio.Task] = set()
 
     @asynccontextmanager
     async def lifespan(_app):
@@ -116,7 +121,7 @@ def build_app(args) -> FastAPI:
         if not args.no_sign:
             tasks.append(asyncio.create_task(sign_listener(hub, conv, args.sign_url)))
         if args.preload_whisper:
-            asyncio.get_running_loop().run_in_executor(None, asr.available)
+            asyncio.get_running_loop().run_in_executor(None, asr.local_available)   # offline fallback ready
         log.info("AI: %s", await llm.status())
         tasks.append(asyncio.create_task(llm.warm_up()))
         yield
@@ -126,11 +131,19 @@ def build_app(args) -> FastAPI:
     app = FastAPI(title="SignBridge speech_service", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-    async def hearing(text: str, language: str, confidence: float = 1.0, english_hint: str | None = None,
-                      type_: str = "speech") -> dict:
-        m = await conv.on_hearing_text(text, language, confidence, english_hint, type_)
-        log.info("hearing %r -> %s | %s [%s]", text, m["sentence"], m["gloss"], m["source"])
+    async def send_suggestions():
+        m = await conv.suggest()
+        log.info("suggestions: %s [%s]", " | ".join(s["text_en"] for s in m["suggestions"]), m["source"])
         await hub.broadcast(m)
+
+    async def speaker(text: str, language: str, confidence: float = 1.0, english_hint: str | None = None,
+                      input_: str = "speech") -> dict:
+        m = await conv.on_speaker_text(text, language, confidence, english_hint, input_)
+        log.info("speaker %r -> %s | %s (%s) [%s]", text, m["sentence"], m["gloss"], m["emotion"], m["source"])
+        await hub.broadcast(m)
+        t = asyncio.create_task(send_suggestions())    # smart replies follow a moment later
+        background.add(t)
+        t.add_done_callback(background.discard)
         return m
 
     @app.get("/health")
@@ -143,9 +156,21 @@ def build_app(args) -> FastAPI:
     def quick_replies():
         return QUICK_REPLIES
 
+    @app.get("/suggestions")
+    async def suggestions():
+        return await conv.suggest()
+
+    @app.get("/summary")
+    async def summary():
+        return await conv.summary()
+
+    @app.get("/transcript")
+    def transcript():
+        return conv.transcript
+
     @app.post("/text")
     async def text_in(body: TextIn):
-        return await hearing(body.content, body.language, type_="text")
+        return await speaker(body.content, body.language, input_="text")
 
     @app.post("/gloss")
     async def gloss_in(body: GlossIn):
@@ -154,23 +179,38 @@ def build_app(args) -> FastAPI:
         await hub.broadcast(msg)
         return msg
 
-    @app.post("/speech")
-    async def speech_in(file: UploadFile = File(...), language: str | None = Form(None)):
+    async def _transcribe(file: UploadFile, language: str | None, fast: bool) -> tuple[dict, bytes]:
         data = await file.read()
         if not await asyncio.to_thread(asr.available):
             raise HTTPException(503, f"Whisper not available on this machine ({asr.status()['error']}). "
                                      "Send text to /text or {'cmd':'text'} on /ws instead.")
         lang = language if language in config.LANG_NAMES else None
         try:
-            r = await asyncio.to_thread(asr.transcribe, data, lang)
+            return await asyncio.to_thread(asr.transcribe, data, lang, False, fast), data
         except Exception as e:  # noqa: BLE001
             raise HTTPException(400, f"could not decode/transcribe audio: {e}") from e
+
+    @app.post("/speech")
+    async def speech_in(file: UploadFile = File(...), language: str | None = Form(None)):
+        r, data = await _transcribe(file, language, fast=False)
         if not r["text"]:
             raise HTTPException(422, "no speech detected")
         hint = None
         if r["language"] != "en" and not await llm.reachable():  # no AI: let Whisper translate to English
-            hint = (await asyncio.to_thread(asr.transcribe, data, r["language"], True))["text"]
-        return await hearing(r["text"], r["language"], r["confidence"], hint)
+            try:
+                hint = (await asyncio.to_thread(asr.transcribe, data, r["language"], True))["text"]
+            except Exception as e:  # noqa: BLE001 - local Whisper not available
+                log.warning("translate pass failed: %s", e)
+        m = await speaker(r["text"], r["language"], r["confidence"], hint)
+        return {**m, "asr": r.get("asr")}
+
+    @app.post("/speech_partial")
+    async def speech_partial_in(file: UploadFile = File(...), language: str | None = Form(None)):
+        r, _ = await _transcribe(file, language, fast=True)
+        m = conv.partial(r["text"], r["language"], r["confidence"])
+        if r["text"]:
+            await hub.broadcast(m)
+        return m
 
     @app.get("/tts")
     async def tts_get(text: str, language: str = "en", emotion: str = "neutral"):
@@ -191,17 +231,25 @@ def build_app(args) -> FastAPI:
                 except json.JSONDecodeError:
                     continue
                 cmd = data.get("cmd", "")
+                content = str(data.get("content", "")).strip()
                 if cmd in FORWARD_TO_SIGN:
                     await hub.to_sign(cmd)
-                elif cmd == "text" and data.get("content", "").strip():
-                    await hearing(data["content"], data.get("language", "en"),
-                                  float(data.get("confidence", 1.0)), type_="text")
+                elif cmd == "partial" and content:
+                    await hub.broadcast(conv.partial(content, data.get("language", "en"),
+                                                     float(data.get("confidence", 1.0))))
+                elif cmd == "text" and content:
+                    await speaker(content, data.get("language", "en"), float(data.get("confidence", 1.0)),
+                                  input_=data.get("input", "text"))
                 elif cmd == "quick_reply":
-                    m = conv.quick_reply(data.get("id", ""))
+                    m = conv.quick_reply(str(data.get("id", "")))
                     if m:
                         await hub.broadcast(m)
                 elif cmd == "sos":
                     await hub.broadcast(conv.sos())
+                elif cmd == "summary":
+                    await hub.broadcast(await conv.summary())
+                elif cmd == "new_conversation":
+                    conv.reset()
                 elif cmd == "set_language" and data.get("language") in config.LANG_NAMES:
                     conv.listener_language = data["language"]
         except WebSocketDisconnect:
@@ -218,7 +266,7 @@ def main():
     ap.add_argument("--port", type=int, default=8002)
     ap.add_argument("--sign-url", default=config.SIGN_WS_URL)
     ap.add_argument("--no-sign", action="store_true", help="don't connect to sign_service")
-    ap.add_argument("--no-llm", action="store_true", help="rule-based only, no Claude calls")
+    ap.add_argument("--no-llm", action="store_true", help="rule-based only, no AI calls")
     ap.add_argument("--preload-whisper", action="store_true", help="load Whisper at startup, not on first use")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s: %(message)s", datefmt="%H:%M:%S")
