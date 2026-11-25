@@ -28,7 +28,7 @@ export default function PhraseBoard({ quick, custom, onQuick, onCustom, onSaveCu
         {draft.length === 0 && <p className="text-sm text-muted">No phrases yet.</p>}
         <ul className="flex flex-col gap-1.5">
           {draft.map((p, i) => (
-            <li key={p.id} className="flex items-center gap-2 rounded-lg bg-surface px-2 py-1.5">
+            <li key={p.id} className="flex items-center gap-2 rounded-lg bg-raised px-2 py-1.5">
               <span className="flex-1">
                 {EMO_ICON[p.emotion]} {p.text}
               </span>
@@ -55,12 +55,12 @@ export default function PhraseBoard({ quick, custom, onQuick, onCustom, onSaveCu
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="New phrase, e.g. I am allergic to penicillin."
-            className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2"
+            className="field min-w-0 flex-1 !rounded-lg px-3 py-2"
           />
           <select
             value={emotion}
             onChange={(e) => setEmotion(e.target.value)}
-            className="rounded-lg border border-line bg-surface px-2"
+            className="field !w-auto !rounded-lg px-2"
             aria-label="Tone"
           >
             <option value="neutral">Neutral</option>
@@ -95,8 +95,8 @@ export default function PhraseBoard({ quick, custom, onQuick, onCustom, onSaveCu
           <button
             key={q.id}
             onClick={() => onQuick(q.id)}
-            className={`rounded-xl border px-3 py-3 text-left font-semibold leading-tight hover:border-accent hover:bg-accent-soft ${
-              q.emotion === 'urgent' ? 'border-orange-400 bg-orange-50 text-orange-950' : 'border-line bg-surface'
+            className={`rounded-xl border px-3 py-3 text-left font-semibold leading-tight transition hover:-translate-y-0.5 hover:border-accent hover:bg-accent-soft hover:shadow-[0_0_16px_var(--accent-glow)] ${
+              q.emotion === 'urgent' ? 'tone tone-urgent !animate-none' : 'border-line-strong bg-raised text-ink'
             }`}
           >
             {EMO_ICON[q.emotion] && <span aria-hidden>{EMO_ICON[q.emotion]} </span>}

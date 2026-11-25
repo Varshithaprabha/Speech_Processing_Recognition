@@ -29,7 +29,9 @@ export default function Avatar({ sequence, mode = 'video', speed = 1, autoPlay =
   return (
     <div className="flex flex-col gap-2">
       <div
-        className={`relative overflow-hidden rounded-xl bg-slate-900 ${compact ? 'aspect-video' : 'aspect-[4/3]'}`}
+        className={`relative overflow-hidden rounded-2xl border bg-sunken transition-shadow ${
+          current ? 'border-accent/60 shadow-[0_0_28px_-6px_var(--accent-glow)]' : 'border-line'
+        } ${compact ? 'aspect-video' : 'aspect-[4/3]'}`}
         aria-label={current ? `Avatar signing ${current.gloss}` : 'Signing avatar'}
       >
         {current ? (
@@ -39,9 +41,9 @@ export default function Avatar({ sequence, mode = 'video', speed = 1, autoPlay =
             <ClipVideo key={`${run}-${idx}`} file={current.video} speed={speed} onEnd={next} />
           )
         ) : (
-          <div className="absolute inset-0 grid place-items-center text-center text-slate-400">
+          <div className="absolute inset-0 grid place-items-center text-center text-muted">
             <div>
-              <div className="text-5xl" aria-hidden>
+              <div className="text-5xl opacity-80 grayscale-[30%]" aria-hidden>
                 🧏
               </div>
               <div className="mt-2 text-sm">
@@ -51,7 +53,7 @@ export default function Avatar({ sequence, mode = 'video', speed = 1, autoPlay =
           </div>
         )}
         {current && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-lg bg-black/70 px-3 py-1 text-lg font-bold tracking-wide text-white">
+          <div key={`${run}-${idx}`} className="msg-in absolute bottom-3 left-1/2 -translate-x-1/2 rounded-lg border border-accent/50 bg-black/70 px-3 py-1 font-mono text-lg font-semibold tracking-wider text-accent backdrop-blur">
             {current.gloss}
           </div>
         )}
@@ -65,10 +67,10 @@ export default function Avatar({ sequence, mode = 'video', speed = 1, autoPlay =
             <button
               key={i}
               onClick={() => play(i)}
-              className={`rounded-md border px-2 py-0.5 text-xs font-bold tracking-wide ${
+              className={`rounded-md border px-2 py-0.5 font-mono text-[0.7rem] font-semibold tracking-wide transition ${
                 i === idx
-                  ? 'border-accent bg-accent text-accent-ink'
-                  : 'border-line bg-sunken text-ink hover:border-accent'
+                  ? 'border-accent bg-accent text-accent-ink shadow-[0_0_12px_var(--accent-glow)]'
+                  : 'border-line-strong bg-sunken text-ink hover:border-accent'
               }`}
             >
               {c.gloss}
@@ -92,7 +94,7 @@ function ClipVideo({ file, speed, onEnd }) {
     return () => clearTimeout(t)
   }, [failed, speed])
   return failed ? (
-    <div className="absolute inset-0 grid place-items-center text-slate-300">clip unavailable</div>
+    <div className="absolute inset-0 grid place-items-center text-muted">clip unavailable</div>
   ) : (
     <video
       ref={ref}
@@ -157,7 +159,7 @@ function Skeleton({ file, speed, onEnd: onEndProp }) {
 function paint(ctx, cv, aspect, { pose, left, right }) {
   const W = cv.width
   const H = cv.height
-  ctx.fillStyle = '#0f172a'
+  ctx.fillStyle = '#0c1210'
   ctx.fillRect(0, 0, W, H)
   if (!pose) return
   // fit the clip frame (aspect) into the canvas, centred on the shoulders
@@ -181,7 +183,7 @@ function paint(ctx, cv, aspect, { pose, left, right }) {
   }
   const [ls, rs] = [P(pose[11]), P(pose[12])]
   // torso
-  ctx.fillStyle = '#334155'
+  ctx.fillStyle = '#22302b'
   ctx.beginPath()
   ctx.moveTo(ls[0] + sw * 0.08, ls[1])
   ctx.lineTo(rs[0] - sw * 0.08, rs[1])
@@ -197,7 +199,7 @@ function paint(ctx, cv, aspect, { pose, left, right }) {
   ctx.beginPath()
   ctx.ellipse(nose[0], nose[1] - sw * 0.05, sw * 0.27, sw * 0.33, 0, 0, Math.PI * 2)
   ctx.fill()
-  ctx.fillStyle = '#1e293b'
+  ctx.fillStyle = '#0c1210'
   for (const e of [2, 5]) {
     const p = P(pose[e])
     ctx.beginPath()
@@ -210,11 +212,11 @@ function paint(ctx, cv, aspect, { pose, left, right }) {
   // arms
   const arm = sw * 0.13
   for (const [a, b, c] of [[11, 13, 15], [12, 14, 16]]) {
-    line(P(pose[a]), P(pose[b]), arm, '#475569')
+    line(P(pose[a]), P(pose[b]), arm, '#2f4139')
     line(P(pose[b]), P(pose[c]), arm * 0.85, '#e2b48f')
   }
   // hands: detailed when tracked, else a simple palm at the wrist
-  for (const [hand, wrist, col] of [[left, 15, '#14b8a6'], [right, 16, '#f59e0b']]) {
+  for (const [hand, wrist, col] of [[left, 15, '#3fe0a5'], [right, 16, '#ffb547']]) {
     if (hand) {
       const pts = hand.map(P)
       for (const [a, b] of HAND) line(pts[a], pts[b], sw * 0.035, col)

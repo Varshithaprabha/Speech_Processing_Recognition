@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { LANGS } from '../lib/settings'
 import { browserSttSupported, startBrowserStt, startWhisperStt } from '../lib/voice'
+import Icon from './Icon'
 import ToneTag from './ToneTag'
+import Wave from './Wave'
+import Words from './Words'
 
 const PLACEHOLDER = {
   en: 'Type what you want to say…',
@@ -71,112 +74,120 @@ export default function SpeakerPanel({ settings, update, lastSigner, signingPart
   }
 
   return (
-    <section className="panel flex min-h-0 flex-1 flex-col overflow-hidden" aria-label="Hearing person">
-      <header className="flex items-center justify-between border-b border-line bg-speaker-soft px-4 py-2.5">
-        <h2 className="flex items-center gap-2 font-bold">
-          <span aria-hidden>🗣️</span> Hearing person
+    <section className="panel side-speaker flex min-h-0 flex-1 flex-col overflow-hidden" aria-label="Hearing person">
+      <span className="panel-edge" aria-hidden />
+      <header className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-2">
+        <h2 className="flex items-center gap-2.5 text-lg font-bold">
+          <span className="grid h-8 w-8 place-items-center rounded-xl bg-speaker-soft text-speaker ring-1 ring-speaker/40" aria-hidden>
+            <Icon name="voice" className="h-4.5 w-4.5" />
+          </span>
+          Hearing person
         </h2>
-        <div className="flex rounded-xl border border-line bg-surface p-0.5" role="radiogroup" aria-label="Language">
+        <div className="seg seg-speaker" role="radiogroup" aria-label="Language">
           {Object.entries(LANGS).map(([k, v]) => (
-            <button
-              key={k}
-              role="radio"
-              aria-checked={lang === k}
-              onClick={() => setLang(k)}
-              className={`rounded-lg px-2.5 py-0.5 text-sm font-semibold ${
-                lang === k ? 'bg-speaker text-white' : 'text-muted hover:text-ink'
-              }`}
-              title={v.name}
-            >
+            <button key={k} role="radio" aria-checked={lang === k} onClick={() => setLang(k)} title={v.name}>
               {v.native}
             </button>
           ))}
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pb-5">
         {/* what the Deaf user said */}
-        <div className="rounded-xl border border-line bg-sunken p-4" aria-live="assertive">
-          <div className="mb-1 flex items-center justify-between">
-            <span className="label">They said {speaking && <span className="blink">🔊</span>}</span>
-            {lastSigner && <ToneTag emotion={lastSigner.emotion} size="lg" />}
+        <div className="screen flex min-h-[11rem] flex-col p-5" aria-live="assertive">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="label flex items-center gap-2">
+              They said
+              <Wave live={speaking} bars={10} className="h-3.5 text-accent" label={speaking ? 'Speaking aloud' : undefined} />
+            </span>
+            {lastSigner && !signingPartial && <ToneTag emotion={lastSigner.emotion} size="lg" />}
           </div>
           {signingPartial ? (
-            <p className="text-lg text-muted">
-              <span className="blink">✋</span> signing… <b className="tracking-wide">{signingPartial}</b>
+            <p className="flex items-center gap-3 text-lg text-muted">
+              <Wave live bars={6} className="h-5 text-accent" />
+              signing… <b className="font-mono tracking-wide text-accent">{signingPartial}</b>
             </p>
           ) : lastSigner ? (
             <>
-              <p className={`text-3xl leading-tight font-semibold ${lastSigner.type === 'alert' ? 'text-danger' : ''}`}>
-                {lastSigner.sentence || lastSigner.content}
+              <p
+                className={`font-display text-3xl leading-tight font-semibold lg:text-[2.35rem] ${
+                  lastSigner.type === 'alert' ? 'text-danger' : ''
+                }`}
+              >
+                <Words key={lastSigner.id} text={lastSigner.sentence || lastSigner.content} step={70} />
               </p>
               {lastSigner.sentence_en && lastSigner.sentence_en !== lastSigner.sentence && (
-                <p className="mt-1 text-muted">{lastSigner.sentence_en}</p>
+                <p className="mt-2 text-muted">{lastSigner.sentence_en}</p>
               )}
-              <button className="btn mt-3" onClick={() => onSpeak(lastSigner)}>
-                🔊 Say it again
+              <button className="btn mt-4 self-start" onClick={() => onSpeak(lastSigner)}>
+                <Icon name="volume" className="h-4 w-4 text-accent" /> Say it again
               </button>
             </>
           ) : (
-            <p className="text-muted">The Deaf user’s signs will appear here as a sentence and be read aloud.</p>
+            <p className="my-auto text-muted">The Deaf user’s signs will appear here as a sentence and be read aloud.</p>
           )}
         </div>
 
         <div className="mt-auto flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="label">Reply by</span>
-            <div role="tablist" className="flex rounded-xl border border-line bg-sunken p-0.5">
+            <div role="tablist" className="seg seg-speaker">
               {[
-                ['speak', '🎙️ Speak'],
-                ['type', '⌨️ Type'],
-              ].map(([id, label]) => (
+                ['speak', 'Speak', 'mic'],
+                ['type', 'Type', 'keyboard'],
+              ].map(([id, label, icon]) => (
                 <button
                   key={id}
                   role="tab"
                   aria-selected={mode === id}
                   onClick={() => setMode(id)}
-                  className={`rounded-lg px-3 py-1 text-sm font-semibold ${
-                    mode === id ? 'bg-speaker text-white' : 'text-muted hover:text-ink'
-                  }`}
+                  className="inline-flex items-center gap-1.5"
                 >
-                  {label}
+                  <Icon name={icon} className="h-3.5 w-3.5" /> {label}
                 </button>
               ))}
             </div>
           </div>
 
           {mode === 'speak' ? (
-            <div className="flex flex-col items-center gap-2 py-2">
+            <div className="flex flex-col items-center gap-3 py-3">
               <button
                 onClick={toggleMic}
                 disabled={busy}
-                className={`grid h-24 w-24 place-items-center rounded-full text-4xl text-white shadow-lg transition ${
-                  listening ? 'recording bg-danger' : 'bg-speaker hover:brightness-110'
-                } disabled:opacity-50`}
+                className={`grid h-24 w-24 place-items-center rounded-full text-4xl transition disabled:opacity-50 ${
+                  listening
+                    ? 'recording bg-danger text-white'
+                    : 'mic-idle bg-speaker text-speaker-ink hover:scale-105'
+                }`}
                 aria-pressed={listening}
                 aria-label={listening ? 'Stop listening' : 'Start speaking'}
               >
-                {busy ? '…' : listening ? '■' : '🎙️'}
+                {busy ? '…' : <Icon name={listening ? 'stop' : 'mic'} className="h-10 w-10" strokeWidth={2.2} />}
               </button>
+              <Wave
+                live={listening || busy}
+                bars={28}
+                className={`h-8 ${listening ? 'text-danger' : 'text-speaker'}`}
+              />
               <div className="text-center text-sm text-muted">
                 {busy
                   ? 'Transcribing…'
                   : listening
                     ? `Listening in ${LANGS[lang].name}… tap to stop`
                     : `Tap and speak in ${LANGS[lang].name}`}
-                <div className="text-xs">
+                <div className="label mt-1 !text-[0.62rem]">
                   {engine === 'browser' ? 'Browser speech recognition' : 'Whisper (speech_service)'}
                 </div>
               </div>
             </div>
           ) : (
-            <form onSubmit={submit} className="flex gap-2">
+            <form onSubmit={submit} className="side-speaker flex gap-2">
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder={PLACEHOLDER[lang]}
                 lang={LANGS[lang].bcp}
-                className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-3 text-lg"
+                className="field min-w-0 flex-1 px-3 py-3 text-lg"
               />
               <button className="btn btn-speaker" disabled={!text.trim()}>
                 Send
