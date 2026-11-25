@@ -1,47 +1,62 @@
 @import 'tailwindcss';
 
 /* ======================================================================================
-   "Signal room" theme: a dark, signal-analyser look for a speech-processing app.
-   Deep green-black graphite, phosphor jade for the Deaf user's side, sodium amber for the
-   hearing person's side. No purples. All colours are variables, so high-contrast mode is
-   one class on <html>.
+   "Ocean Sunset" theme: midnight navy with slowly drifting blue and peach auroras.
+   Ocean gradient (sky -> royal blue) for the Deaf user's side, sunset gradient
+   (peach -> coral-pink) for the hearing person's side. No yellow, green or purple.
+   All colours are variables, so high-contrast mode is one class on <html>.
+   Text on the gradient buttons is dark ink: >= 4.5:1 contrast across each gradient.
    ====================================================================================== */
 :root {
-  --bg: #090d0c;
-  --bg-glow-a: #0f2a22; /* jade haze, top left */
-  --bg-glow-b: #2a1c08; /* amber haze, bottom right */
-  --grid: rgba(120, 255, 200, 0.035);
-  --surface: #111816;
-  --raised: #17201d;
-  --sunken: #0c1210;
-  --ink: #e3ece7;
-  --muted: #86998f;
-  --line: #22302b;
-  --line-strong: #2f4139;
-  --accent: #3fe0a5; /* phosphor jade: the Deaf user's side */
-  --accent-ink: #03140d;
-  --accent-soft: #0f2620;
-  --accent-glow: rgba(63, 224, 165, 0.35);
-  --speaker: #ffb547; /* sodium amber: the hearing person's side */
-  --speaker-ink: #1d1203;
-  --speaker-soft: #2a1f0e;
-  --speaker-glow: rgba(255, 181, 71, 0.35);
-  --danger: #ff5a4e;
-  --danger-soft: #2c1210;
-  --focus: #e8f27a;
+  --bg: #070b1a;
+  --bg-2: #0d1530;
+  --aurora-a: rgba(56, 140, 248, 0.32); /* ocean glow */
+  --aurora-b: rgba(255, 140, 130, 0.22); /* sunset glow */
+  --aurora-c: rgba(37, 99, 235, 0.22); /* deep blue glow */
+  --grid: rgba(150, 180, 255, 0.035);
+  --surface: #0d1429;
+  --raised: #121b36;
+  --sunken: #0a1024;
+  --ink: #e8edfb;
+  --muted: #8f9bbf;
+  --line: #1d2848;
+  --line-strong: #2a3762;
+  --accent: #5cc8fa; /* ocean: the Deaf user's side */
+  --accent-2: #3b82f6;
+  --accent-ink: #04122a;
+  --accent-soft: #0f2142;
+  --accent-glow: rgba(92, 170, 250, 0.4);
+  --accent-grad: linear-gradient(120deg, #6fd3fb 0%, #3b82f6 55%, #5cc8fa 100%);
+  --speaker: #ff9a8f; /* sunset: the hearing person's side */
+  --speaker-2: #ff6b81;
+  --speaker-ink: #2a0b14;
+  --speaker-soft: #2c1626;
+  --speaker-glow: rgba(255, 130, 140, 0.4);
+  --speaker-grad: linear-gradient(120deg, #ffc0a3 0%, #ff6b81 55%, #ffb199 100%);
+  --brand-grad: linear-gradient(100deg, #6fd3fb, #3b82f6 35%, #ff8f93 70%, #ffc0a3);
+  --danger: #ff4757;
+  --danger-soft: #2e0f19;
+  --focus: #9be7ff;
   /* tone tags: colour + emoji + word, never colour alone */
-  --tone-neutral: #9fb1a8;
-  --tone-happy: #3fe0a5;
-  --tone-angry: #ff6b5e;
-  --tone-urgent: #ff8f3a;
-  --tone-question: #69c8ff;
+  --tone-neutral: #a6b1d3;
+  --tone-happy: #ff9fb2;
+  --tone-angry: #ff5c5c;
+  --tone-urgent: #ff8a3d;
+  --tone-question: #7cc4ff;
   color-scheme: dark;
 }
 html.hc {
   --bg: #000000;
-  --bg-glow-a: #000000;
-  --bg-glow-b: #000000;
+  --bg-2: #000000;
+  --aurora-a: transparent;
+  --aurora-b: transparent;
+  --aurora-c: transparent;
   --grid: transparent;
+  --accent-2: #ffe600;
+  --speaker-2: #00e5ff;
+  --accent-grad: linear-gradient(#ffe600, #ffe600);
+  --speaker-grad: linear-gradient(#00e5ff, #00e5ff);
+  --brand-grad: linear-gradient(#ffffff, #ffffff);
   --surface: #000000;
   --raised: #000000;
   --sunken: #111111;
@@ -95,39 +110,112 @@ html.text-xlarge {
   --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
 }
 
-/* background: two soft hazes + a faint analyser grid that drifts slowly */
+/* background: midnight navy gradient + a faint grid; the auroras are separate layers (below) */
 body {
   background-color: var(--bg);
   background-image:
-    radial-gradient(60rem 40rem at -10% -20%, var(--bg-glow-a), transparent 60%),
-    radial-gradient(50rem 36rem at 110% 120%, var(--bg-glow-b), transparent 60%),
     linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    linear-gradient(160deg, var(--bg) 0%, var(--bg-2) 55%, var(--bg) 100%);
   background-size:
-    100% 100%,
-    100% 100%,
-    32px 32px,
-    32px 32px;
+    40px 40px,
+    40px 40px,
+    100% 100%;
   background-attachment: fixed;
-  animation: grid-drift 40s linear infinite;
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
-@keyframes grid-drift {
+/* three big blurred glows that drift slowly behind everything, like an aurora */
+body::before,
+body::after,
+#root::before {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(70px);
+  will-change: transform;
+}
+body::before {
+  width: 55vw;
+  height: 55vw;
+  left: -12vw;
+  top: -20vw;
+  background: radial-gradient(circle, var(--aurora-a), transparent 65%);
+  animation: aurora-a 26s ease-in-out infinite alternate;
+}
+body::after {
+  width: 50vw;
+  height: 50vw;
+  right: -14vw;
+  bottom: -22vw;
+  background: radial-gradient(circle, var(--aurora-b), transparent 65%);
+  animation: aurora-b 32s ease-in-out infinite alternate;
+}
+#root::before {
+  width: 40vw;
+  height: 40vw;
+  left: 30vw;
+  top: 35vh;
+  background: radial-gradient(circle, var(--aurora-c), transparent 65%);
+  animation: aurora-c 38s ease-in-out infinite alternate;
+}
+@keyframes aurora-a {
+  to {
+    transform: translate(22vw, 18vh) scale(1.15);
+  }
+}
+@keyframes aurora-b {
+  to {
+    transform: translate(-25vw, -20vh) scale(1.2);
+  }
+}
+@keyframes aurora-c {
+  0% {
+    transform: translate(-10vw, 0) scale(0.9);
+  }
+  100% {
+    transform: translate(12vw, -18vh) scale(1.15);
+  }
+}
+#root {
+  position: relative;
+  isolation: isolate;
+}
+
+/* gradient text (the SignBridge name, headings): the colours flow slowly along it */
+.grad-text {
+  background: var(--brand-grad);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: flow 8s ease-in-out infinite alternate;
+}
+.grad-text-signer {
+  background: var(--accent-grad);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: flow 6s ease-in-out infinite alternate;
+}
+.grad-text-speaker {
+  background: var(--speaker-grad);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: flow 6s ease-in-out infinite alternate;
+}
+@keyframes flow {
   from {
-    background-position:
-      0 0,
-      0 0,
-      0 0,
-      0 0;
+    background-position: 0% 50%;
   }
   to {
-    background-position:
-      0 0,
-      0 0,
-      0 32px,
-      32px 0;
+    background-position: 100% 50%;
   }
 }
 
@@ -173,21 +261,30 @@ html.hc .btn {
 /* ---------------------------------------------------------------- surfaces */
 .panel {
   position: relative;
-  background: linear-gradient(180deg, var(--raised), var(--surface) 40%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--raised) 88%, transparent), color-mix(in srgb, var(--surface) 82%, transparent) 45%);
   border: 1px solid var(--line);
   border-radius: 1.25rem;
+  backdrop-filter: blur(14px);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.03) inset,
-    0 18px 40px -24px rgba(0, 0, 0, 0.8);
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 24px 50px -28px rgba(0, 0, 0, 0.9);
 }
-/* a glowing edge on top of each half, in that side's colour, with a scan sweeping across it */
+.side-signer.panel {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+}
+.side-speaker.panel {
+  border-color: color-mix(in srgb, var(--speaker) 22%, var(--line));
+}
+/* a glowing gradient edge on top of each half, in that side's colours, with a light sweeping across */
 .panel-edge {
   position: absolute;
   inset: 0 1.25rem auto 1.25rem;
   height: 2px;
   border-radius: 2px;
-  background: var(--edge, var(--accent));
-  opacity: 0.55;
+  background: var(--edge-grad, var(--accent-grad));
+  background-size: 200% 100%;
+  animation: flow 5s ease-in-out infinite alternate;
+  opacity: 0.85;
   box-shadow: 0 0 18px var(--edge, var(--accent));
   overflow: hidden;
 }
@@ -210,9 +307,11 @@ html.hc .btn {
 }
 .side-signer {
   --edge: var(--accent);
+  --edge-grad: var(--accent-grad);
 }
 .side-speaker {
   --edge: var(--speaker);
+  --edge-grad: var(--speaker-grad);
 }
 
 .screen {
@@ -245,7 +344,7 @@ html.hc .btn {
   cursor: pointer;
 }
 .btn:hover {
-  background: #1e2925;
+  background: #18233f;
   border-color: var(--muted);
 }
 .btn:active {
@@ -255,25 +354,36 @@ html.hc .btn {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.btn-accent {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-color: var(--accent);
+/* gradient buttons: the gradient slides along on hover */
+.btn-accent,
+.btn-speaker {
+  border-color: transparent;
+  background-size: 200% 100%;
+  background-position: 0% 50%;
+  transition:
+    background-position 0.5s ease,
+    box-shadow 0.25s,
+    transform 0.08s;
 }
-.btn-accent:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 22px var(--accent-glow);
+.btn-accent {
+  background-image: var(--accent-grad);
+  color: var(--accent-ink);
 }
 .btn-speaker {
-  background: var(--speaker);
+  background-image: var(--speaker-grad);
   color: var(--speaker-ink);
-  border-color: var(--speaker);
+}
+.btn-accent:hover,
+.btn-speaker:hover {
+  background-color: transparent;
+  border-color: transparent;
+  background-position: 100% 50%;
+}
+.btn-accent:hover {
+  box-shadow: 0 0 26px var(--accent-glow);
 }
 .btn-speaker:hover {
-  background: var(--speaker);
-  border-color: var(--speaker);
-  box-shadow: 0 0 22px var(--speaker-glow);
+  box-shadow: 0 0 26px var(--speaker-glow);
 }
 .btn-danger {
   background: var(--danger);
@@ -333,13 +443,15 @@ html.hc .btn {
 }
 .seg-signer > button[aria-selected='true'],
 .seg-signer > button[aria-checked='true'] {
-  background: var(--accent);
+  background: var(--accent-grad);
+  background-size: 200% 100%;
   color: var(--accent-ink);
   box-shadow: 0 0 14px var(--accent-glow);
 }
 .seg-speaker > button[aria-selected='true'],
 .seg-speaker > button[aria-checked='true'] {
-  background: var(--speaker);
+  background: var(--speaker-grad);
+  background-size: 200% 100%;
   color: var(--speaker-ink);
   box-shadow: 0 0 14px var(--speaker-glow);
 }
@@ -464,6 +576,13 @@ textarea::placeholder {
 .wave.live > i {
   animation: wave-live 0.9s ease-in-out infinite;
 }
+/* the two sides' waveforms fade through their gradient, bottom to top */
+.wave.text-accent > i {
+  background: linear-gradient(to top, var(--accent-2), var(--accent));
+}
+.wave.text-speaker > i {
+  background: linear-gradient(to top, var(--speaker-2), var(--speaker));
+}
 @keyframes wave-idle {
   0%,
   100% {
@@ -518,9 +637,20 @@ textarea::placeholder {
   }
 }
 
-/* the mic: a slow amber "breath" when idle, ripples while listening */
+/* the mic: a sunset gradient that slowly turns, a soft "breath" when idle, ripples while listening */
+.mic-grad {
+  background: conic-gradient(from 0deg, #ffc0a3, #ff6b81, #ff9a8f, #ffc0a3);
+  color: var(--speaker-ink);
+}
 .mic-idle {
-  animation: mic-breathe 3s ease-in-out infinite;
+  animation:
+    mic-breathe 3s ease-in-out infinite,
+    mic-turn 9s linear infinite;
+}
+@keyframes mic-turn {
+  to {
+    filter: hue-rotate(-14deg) saturate(1.1);
+  }
 }
 @keyframes mic-breathe {
   50% {
@@ -634,4 +764,14 @@ html.hc .word {
     color: #000;
     animation: none;
   }
+}
+
+html.hc .mic-grad {
+  background: var(--speaker);
+}
+html.hc .grad-text,
+html.hc .grad-text-signer,
+html.hc .grad-text-speaker {
+  background: none;
+  color: var(--ink);
 }

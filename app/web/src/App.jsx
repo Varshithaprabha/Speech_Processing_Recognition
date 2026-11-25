@@ -274,7 +274,7 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-xl leading-none font-bold">
-              Sign<span className="text-accent">Bridge</span>
+              <span className="grad-text">SignBridge</span>
             </h1>
             <p className="label mt-1 !text-[0.6rem]">ISL ⇄ speech · live</p>
           </div>

@@ -18,7 +18,7 @@ const KIND = {
   sos: 'SOS',
 }
 
-/** Chat-style conversation display: Deaf user on the left (jade), hearing person on the right (amber). */
+/** Chat-style conversation display: Deaf user on the left (ocean blue), hearing person on the right (sunset coral). */
 export default function Timeline({ items, speakerPartial, signingPartial, onReplaySigns, onSpeak }) {
   const end = useRef(null)
   useEffect(() => {

@@ -159,7 +159,7 @@ function Skeleton({ file, speed, onEnd: onEndProp }) {
 function paint(ctx, cv, aspect, { pose, left, right }) {
   const W = cv.width
   const H = cv.height
-  ctx.fillStyle = '#0c1210'
+  ctx.fillStyle = '#0a1024'
   ctx.fillRect(0, 0, W, H)
   if (!pose) return
   // fit the clip frame (aspect) into the canvas, centred on the shoulders
@@ -183,7 +183,7 @@ function paint(ctx, cv, aspect, { pose, left, right }) {
   }
   const [ls, rs] = [P(pose[11]), P(pose[12])]
   // torso
-  ctx.fillStyle = '#22302b'
+  ctx.fillStyle = '#1d2848'
   ctx.beginPath()
   ctx.moveTo(ls[0] + sw * 0.08, ls[1])
   ctx.lineTo(rs[0] - sw * 0.08, rs[1])
@@ -199,7 +199,7 @@ function paint(ctx, cv, aspect, { pose, left, right }) {
   ctx.beginPath()
   ctx.ellipse(nose[0], nose[1] - sw * 0.05, sw * 0.27, sw * 0.33, 0, 0, Math.PI * 2)
   ctx.fill()
-  ctx.fillStyle = '#0c1210'
+  ctx.fillStyle = '#0a1024'
   for (const e of [2, 5]) {
     const p = P(pose[e])
     ctx.beginPath()
@@ -212,11 +212,11 @@ function paint(ctx, cv, aspect, { pose, left, right }) {
   // arms
   const arm = sw * 0.13
   for (const [a, b, c] of [[11, 13, 15], [12, 14, 16]]) {
-    line(P(pose[a]), P(pose[b]), arm, '#2f4139')
+    line(P(pose[a]), P(pose[b]), arm, '#2a3762')
     line(P(pose[b]), P(pose[c]), arm * 0.85, '#e2b48f')
   }
   // hands: detailed when tracked, else a simple palm at the wrist
-  for (const [hand, wrist, col] of [[left, 15, '#3fe0a5'], [right, 16, '#ffb547']]) {
+  for (const [hand, wrist, col] of [[left, 15, '#5cc8fa'], [right, 16, '#ff8f93']]) {
     if (hand) {
       const pts = hand.map(P)
       for (const [a, b] of HAND) line(pts[a], pts[b], sw * 0.035, col)

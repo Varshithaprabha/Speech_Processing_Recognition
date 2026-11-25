@@ -47,7 +47,7 @@ export default function SignerPanel({
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-accent-soft text-accent ring-1 ring-accent/40" aria-hidden>
             <Icon name="hand" className="h-4.5 w-4.5" />
           </span>
-          Deaf user
+          <span className="grad-text-signer">Deaf user</span>
         </h2>
         <span className="label">sees signs &amp; captions</span>
       </header>
