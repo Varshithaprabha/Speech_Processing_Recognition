@@ -1,0 +1,234 @@
+@import 'tailwindcss';
+
+/* Semantic colours as CSS variables, so high-contrast mode is one class on <html>. */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --sunken: #eef1f4;
+  --ink: #0f172a;
+  --muted: #5b6676;
+  --line: #dde3ea;
+  --accent: #0d9488; /* teal: the Deaf user's side */
+  --accent-ink: #ffffff;
+  --accent-soft: #e6f6f4;
+  --speaker: #4f46e5; /* indigo: the hearing person's side */
+  --speaker-soft: #eef0ff;
+  --danger: #dc2626;
+  --danger-soft: #fdecec;
+  --focus: #f59e0b;
+  color-scheme: light;
+}
+html.hc {
+  --bg: #000000;
+  --surface: #000000;
+  --sunken: #111111;
+  --ink: #ffffff;
+  --muted: #e5e5e5;
+  --line: #ffffff;
+  --accent: #ffe600;
+  --accent-ink: #000000;
+  --accent-soft: #1a1a00;
+  --speaker: #00e5ff;
+  --speaker-soft: #001a1f;
+  --danger: #ff3b3b;
+  --danger-soft: #2a0000;
+  --focus: #ffe600;
+  color-scheme: dark;
+}
+html.text-large {
+  font-size: 112.5%;
+}
+html.text-xlarge {
+  font-size: 131%;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-speaker: var(--speaker);
+  --color-speaker-soft: var(--speaker-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: 'Inter', 'Segoe UI', 'Noto Sans', 'Noto Sans Telugu', 'Noto Sans Devanagari', system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+html.hc .bg-speaker {
+  color: #000 !important;
+}
+html.hc .tone {
+  background: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+html.hc .panel,
+html.hc .chip,
+html.hc .btn {
+  border-width: 2px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition:
+    background 0.15s,
+    transform 0.05s;
+  cursor: pointer;
+}
+.btn:hover {
+  background: var(--sunken);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-accent {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.btn-accent:hover {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+.btn-speaker {
+  background: var(--speaker);
+  color: #fff;
+  border-color: var(--speaker);
+}
+html.hc .btn-speaker {
+  color: #000;
+}
+.btn-speaker:hover {
+  background: var(--speaker);
+  filter: brightness(1.08);
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+.btn-danger:hover {
+  background: var(--danger);
+  filter: brightness(1.08);
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.chip:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* alert flash around the screen (urgent caption / SOS) */
+@keyframes flash {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: inset 0 0 0 14px var(--danger);
+  }
+}
+.flash {
+  animation: flash 0.5s ease-in-out 4;
+}
+@keyframes sosbg {
+  0%,
+  100% {
+    background: #b91c1c;
+  }
+  50% {
+    background: #7f1d1d;
+  }
+}
+.sos-bg {
+  animation: sosbg 1s steps(1) infinite;
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--speaker) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 18px transparent;
+  }
+}
+.recording {
+  animation: pulse-ring 1.1s ease-out infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.blink {
+  animation: blink 1s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash,
+  .sos-bg,
+  .recording,
+  .blink {
+    animation: none !important;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}
