@@ -81,7 +81,7 @@ export default function SpeakerPanel({ settings, update, lastSigner, signingPart
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-speaker-soft text-speaker ring-1 ring-speaker/40" aria-hidden>
             <Icon name="voice" className="h-4.5 w-4.5" />
           </span>
-          Hearing person
+          <span className="grad-text-speaker">Hearing person</span>
         </h2>
         <div className="seg seg-speaker" role="radiogroup" aria-label="Language">
           {Object.entries(LANGS).map(([k, v]) => (
@@ -157,7 +157,7 @@ export default function SpeakerPanel({ settings, update, lastSigner, signingPart
                 className={`grid h-24 w-24 place-items-center rounded-full text-4xl transition disabled:opacity-50 ${
                   listening
                     ? 'recording bg-danger text-white'
-                    : 'mic-idle bg-speaker text-speaker-ink hover:scale-105'
+                    : 'mic-idle mic-grad hover:scale-105'
                 }`}
                 aria-pressed={listening}
                 aria-label={listening ? 'Stop listening' : 'Start speaking'}
