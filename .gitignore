@@ -18,3 +18,8 @@ sign_service/models/mediapipe/
 sign_service/data/old_webcam_close_varsh/
 sign_service/data/rejected_clips/
 sign_service/reports/live/
+
+# app (Part C)
+app/data/
+app/web/node_modules/
+app/web/dist/
