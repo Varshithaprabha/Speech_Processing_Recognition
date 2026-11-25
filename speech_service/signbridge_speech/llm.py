@@ -1,0 +1,380 @@
+"""AI language layer with free providers, tried in order (LLM_PROVIDERS, default "groq,ollama"):
+
+  groq       free API key from console.groq.com (GROQ_API_KEY), model openai/gpt-oss-120b, strict JSON schema
+  ollama     local model on this PC (no key, works offline), default gemma3:4b
+  anthropic  optional, only if ANTHROPIC_API_KEY is set and "anthropic" is listed
+
+Every public function returns None when all providers fail, so the caller falls back to rules.py.
+"""
+from __future__ import annotations
+
+import json
+import logging
+import os
+import time
+
+import httpx
+
+from . import config
+
+log = logging.getLogger("speech_service.llm")
+
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+_http: httpx.AsyncClient | None = None
+_ollama_ok: tuple[float, bool] = (0.0, False)          # (checked_at, reachable)
+
+
+def _client() -> httpx.AsyncClient:
+    global _http
+    if _http is None:
+        _http = httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=3.0))
+    return _http
+
+
+def providers() -> list[str]:
+    """Providers that are configured (not necessarily reachable right now)."""
+    if not config.USE_LLM:
+        return []
+    out = []
+    for p in config.LLM_PROVIDERS:
+        if p == "groq" and os.getenv("GROQ_API_KEY"):
+            out.append(p)
+        elif p == "ollama":
+            out.append(p)
+        elif p == "anthropic" and os.getenv("ANTHROPIC_API_KEY"):
+            out.append(p)
+    return out
+
+
+def available() -> bool:
+    return bool(providers())
+
+
+async def _ollama_reachable() -> bool:
+    global _ollama_ok
+    checked, ok = _ollama_ok
+    if time.time() - checked < 30:
+        return ok
+    try:
+        r = await _client().get(f"{config.OLLAMA_URL}/api/tags", timeout=2.0)
+        ok = r.status_code == 200
+    except httpx.HTTPError:
+        ok = False
+    _ollama_ok = (time.time(), ok)
+    return ok
+
+
+async def warm_up() -> None:
+    """Load the Ollama model into GPU memory now, so the first real sentence isn't slow."""
+    if "ollama" not in providers() or not await _ollama_reachable():
+        return
+    try:
+        await _client().post(f"{config.OLLAMA_URL}/api/generate",
+                             json={"model": config.OLLAMA_MODEL, "keep_alive": "30m"}, timeout=120.0)
+        log.info("Ollama model %s loaded", config.OLLAMA_MODEL)
+    except httpx.HTTPError as e:
+        log.warning("Ollama warm-up failed: %s", e)
+
+
+async def reachable() -> bool:
+    """True if at least one provider can probably answer right now (cloud keys assumed online)."""
+    p = providers()
+    return any(x in p for x in ("groq", "anthropic")) or ("ollama" in p and await _ollama_reachable())
+
+
+async def status() -> dict:
+    return {"providers": providers(), "groq_model": config.GROQ_MODEL if "groq" in providers() else None,
+            "ollama_model": config.OLLAMA_MODEL, "ollama_reachable": await _ollama_reachable()}
+
+
+# ------------------------------------------------------------------------------ providers
+
+_groq_cooldown_until = 0.0     # after a 429, skip Groq until then (free tier: tokens per minute)
+
+
+async def _groq(system: str, user: str, schema: dict) -> dict | None:
+    global _groq_cooldown_until
+    if time.time() < _groq_cooldown_until:
+        return None
+    body = {
+        "model": config.GROQ_MODEL,
+        "reasoning_effort": config.GROQ_REASONING,    # "low": ~10x fewer thinking tokens, stays under free limits
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+        "response_format": {"type": "json_schema",
+                            "json_schema": {"name": "signbridge", "strict": True, "schema": schema}},
+        "temperature": 0,
+        "max_completion_tokens": 2000,
+    }
+    r = await _client().post(GROQ_URL, json=body, timeout=15.0,
+                             headers={"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"})
+    if r.status_code == 429:
+        try:
+            wait = float(r.headers.get("retry-after", "20"))
+        except ValueError:
+            wait = 20.0
+        _groq_cooldown_until = time.time() + min(wait, 120)
+        log.warning("Groq free-tier limit reached; using the next provider for %.0fs", wait)
+        return None
+    if r.status_code != 200:
+        log.warning("Groq HTTP %s: %s", r.status_code, r.text[:200])
+        return None
+    return json.loads(r.json()["choices"][0]["message"]["content"])
+
+
+async def _ollama(system: str, user: str, schema: dict) -> dict | None:
+    if not await _ollama_reachable():
+        return None
+    body = {
+        "model": config.OLLAMA_MODEL,
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+        "format": schema,                               # Ollama structured outputs
+        "stream": False,
+        "keep_alive": "30m",
+        "options": {"temperature": 0},
+    }
+    r = await _client().post(f"{config.OLLAMA_URL}/api/chat", json=body, timeout=60.0)
+    if r.status_code != 200:
+        log.warning("Ollama HTTP %s: %s", r.status_code, r.text[:200])
+        return None
+    return json.loads(r.json()["message"]["content"])
+
+
+async def _anthropic(system: str, user: str, schema: dict) -> dict | None:
+    import anthropic
+    client = anthropic.AsyncAnthropic(timeout=20.0, max_retries=1)
+    resp = await client.beta.messages.create(
+        model=config.CLAUDE_MODEL, max_tokens=4000, system=system,
+        messages=[{"role": "user", "content": user}],
+        output_config={"effort": config.CLAUDE_EFFORT, "format": {"type": "json_schema", "schema": schema}},
+        betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+    )
+    if resp.stop_reason in ("refusal", "max_tokens"):
+        return None
+    return json.loads(next((b.text for b in resp.content if b.type == "text"), ""))
+
+
+PROVIDERS = {"groq": _groq, "ollama": _ollama, "anthropic": _anthropic}
+
+
+async def _call(system: str, user: str, schema: dict, validate) -> tuple[dict, str] | None:
+    """Try each provider in order; return (validated result, provider name) or None."""
+    for name in providers():
+        t = time.time()
+        try:
+            out = await PROVIDERS[name](system, user, schema)
+        except (httpx.HTTPError, json.JSONDecodeError, KeyError, IndexError, TypeError) as e:
+            log.warning("%s failed: %s: %s", name, type(e).__name__, e)
+            continue
+        except Exception as e:  # noqa: BLE001 - e.g. anthropic SDK errors
+            log.warning("%s failed: %s: %s", name, type(e).__name__, e)
+            continue
+        out = validate(out) if isinstance(out, dict) else None
+        if out:
+            log.debug("%s answered in %.1fs", name, time.time() - t)
+            return out, name
+        log.warning("%s returned unusable output", name)
+    return None
+
+
+# ------------------------------------------------------------------------------ prompts
+
+GLOSS_SYSTEM = """You are the voice of a Deaf patient in an Indian hospital who signs in Indian Sign Language (ISL).
+A sign recogniser turns their signs into GLOSS: English words in ISL order, without grammar.
+Turn the gloss into the short, natural sentence the patient means, in the first person, said to a doctor or nurse.
+
+The recogniser only knows these 17 signs:
+HELLO, HOW-ARE-YOU, THANK-YOU, ME (I/me/my), DOCTOR, HOSPITAL, SICK (ill/unwell), HOT (fever),
+GOOD (fine/better/good), BAD (unwell/worse/bad), MEDICINE, TODAY, TOMORROW, YESTERDAY, MOTHER, FATHER, FAMILY.
+
+Rules:
+- "YESTERDAY TODAY" together means "since yesterday". Infer tense from time words.
+- A missing subject means "I". ME HOT = "I have a fever" (not "I am hot").
+- MEDICINE GOOD = the medicine is helping. ME DOCTOR = I need a doctor.
+- emotion "question" = the signer asked a question; "urgent" = make it direct and urgent.
+- You also get a DRAFT made by a grammar program. It is usually right about the meaning, only clumsy.
+  Keep its meaning; just make it natural. Change the meaning only if the draft is clearly wrong for the gloss.
+- Use the recent conversation ONLY to resolve very short answers (doctor asked "Since when?", gloss YESTERDAY -> "Since yesterday.").
+  Do not carry earlier topics into the new sentence.
+- Words with confidence below 0.6 may be misrecognised; prefer the reading that fits the conversation.
+- Never add facts, feelings or worries that are not in the gloss. One or two short sentences.
+- Only people/family words with "urgent" = asking for them to be called.
+
+Reply with JSON only: {"sentence_en": English sentence, "sentence": the same sentence in the listener's
+language (identical to sentence_en if the listener language is English; Devanagari for Hindi, Telugu script
+for Telugu), "emotion": one of neutral, happy, angry, urgent, question}.
+
+Examples:
+ME HOT YESTERDAY TODAY (neutral, English) -> {"sentence_en": "I've had a fever since yesterday.", "sentence": "I've had a fever since yesterday.", "emotion": "neutral"}
+DOCTOR TOMORROW (question, Hindi) -> {"sentence_en": "Will the doctor come tomorrow?", "sentence": "क्या डॉक्टर कल आएंगे?", "emotion": "question"}
+MOTHER FATHER (urgent, English) -> {"sentence_en": "Please call my mother and father!", "sentence": "Please call my mother and father!", "emotion": "urgent"}
+DOCTOR YOU (question, English) -> {"sentence_en": "Are you the doctor?", "sentence": "Are you the doctor?", "emotion": "question"}"""
+
+TEXT_SYSTEM_TMPL = """You help a hearing doctor or nurse in an Indian hospital talk to a Deaf patient. The patient
+watches an avatar that can only play these ISL signs (glosses):
+{vocab}
+
+The hearing person's words may be English, Hindi, Telugu or a mix (maybe romanised, maybe with speech-to-text errors).
+Reply with JSON only:
+- "english": a short, clean English caption of what they said (translate if needed, keep the meaning exactly).
+- "gloss": the ISL rendering using ONLY the allowed glosses above, in ISL order: greeting first, then time
+  words, then subject, then the rest. Drop articles and helper verbs. 1-6 signs. ME = the speaker,
+  YOU = the patient. HOT = fever/temperature, SICK = ill/pain. Empty list if nothing fits.
+- "emotion": "question" for questions, "urgent" for emergencies or instructions needed right now,
+  "angry" if the speaker is clearly annoyed or rude, "happy" for good news or thanks, otherwise "neutral".
+- "unclear": true if the text is too garbled to be sure what was meant (speech-to-text errors, wrong
+  script, nonsense). Then give your best literal reading in "english" and do not guess a different meaning.
+  The text may be Telugu or Hindi written in another script or in Latin letters: read it phonetically.
+
+Examples:
+"Did you take your medicine today?" -> {{"english": "Did you take your medicine today?", "gloss": ["TODAY", "YOU", "MEDICINE"], "emotion": "question"}}
+"Aapko kal se bukhar hai?" -> {{"english": "Have you had a fever since yesterday?", "gloss": ["YESTERDAY", "TODAY", "YOU", "HOT"], "emotion": "question"}}"""
+
+
+def _history_block(history: list[dict]) -> str:
+    if not history:
+        return "(start of conversation)"
+    lines = []
+    for h in history[-4:]:
+        who = "Patient (signed)" if h.get("from") == "signer" else "Doctor/nurse (spoke)"
+        lines.append(f"{who}: {h.get('sentence_en') or h.get('sentence') or h.get('content')}")
+    return "\n".join(lines)
+
+
+def _emotion(e) -> str:
+    return e if e in config.EMOTIONS else "neutral"
+
+
+# ------------------------------------------------------------------------------ public API
+
+async def gloss_to_sentence(glosses: list[str], emotion: str, words: list[dict] | None,
+                            listener_language: str, history: list[dict], draft: str = "") -> dict | None:
+    """-> {"sentence_en", "sentence", "emotion", "provider"} or None."""
+    if not available() or not glosses:
+        return None
+    lang = config.LANG_NAMES.get(listener_language, "English")
+    conf = ", ".join(f"{w['gloss']}={w.get('confidence', 1):.2f}" for w in (words or []) if "gloss" in w)
+    user = (f"Recent conversation:\n{_history_block(history)}\n\n"
+            f"Gloss: {' '.join(glosses)}\nSigner emotion: {emotion}\n"
+            + (f"Per-word confidence: {conf}\n" if conf else "")
+            + (f"Draft: {draft}\n" if draft else "")
+            + f"Listener language: {lang}")
+    schema = {"type": "object",
+              "properties": {"sentence_en": {"type": "string"}, "sentence": {"type": "string"},
+                             "emotion": {"type": "string", "enum": config.EMOTIONS}},
+              "required": ["sentence_en", "sentence", "emotion"], "additionalProperties": False}
+
+    def validate(o: dict) -> dict | None:
+        en = str(o.get("sentence_en", "")).strip()
+        if not en:
+            return None
+        s = str(o.get("sentence", "")).strip() or en
+        return {"sentence_en": en, "sentence": en if listener_language == "en" else s,
+                "emotion": _emotion(o.get("emotion"))}
+
+    res = await _call(GLOSS_SYSTEM, user, schema, validate)
+    if not res:
+        return None
+    out, provider = res
+    return {**out, "provider": provider}
+
+
+async def text_to_gloss(text: str, language: str, allowed: list[str], history: list[dict]) -> dict | None:
+    """-> {"english", "gloss": [...], "emotion", "provider"} or None."""
+    if not available() or not text.strip():
+        return None
+    system = TEXT_SYSTEM_TMPL.format(vocab=", ".join(allowed))
+    # No conversation history here on purpose: the caption must come from what was actually said, never
+    # filled in from earlier topics when speech-to-text is garbled.
+    user = f"Hearing person said ({config.LANG_NAMES.get(language, 'unknown language')}): {text}"
+    schema = {"type": "object",
+              "properties": {"english": {"type": "string"},
+                             "gloss": {"type": "array", "items": {"type": "string", "enum": allowed}},
+                             "emotion": {"type": "string", "enum": config.EMOTIONS},
+                             "unclear": {"type": "boolean"}},
+              "required": ["english", "gloss", "emotion", "unclear"], "additionalProperties": False}
+
+    def validate(o: dict) -> dict | None:
+        en = str(o.get("english", "")).strip()
+        if not en:
+            return None
+        gloss = [str(g).upper() for g in (o.get("gloss") or []) if str(g).upper() in allowed]
+        return {"english": en, "gloss": gloss, "emotion": _emotion(o.get("emotion")),
+                "unclear": bool(o.get("unclear"))}
+
+    res = await _call(system, user, schema, validate)
+    if not res:
+        return None
+    out, provider = res
+    return {**out, "provider": provider}
+
+
+SUGGEST_SYSTEM = """You help a Deaf patient in an Indian hospital reply quickly. Based on the last few messages,
+suggest 4 short replies the PATIENT is most likely to want to say next, in the first person.
+- Answer the hearing person's last question or instruction directly.
+- For a yes/no question, give a "Yes, ..." and a "No, ..." version that repeat its topic
+  ("Did you take your medicine?" -> "Yes, I took it." / "No, I didn't take it.").
+- For an open question ("How are you feeling?"), use general answers ("I'm not feeling well.",
+  "I'm feeling better.") or facts the PATIENT already said earlier. Never invent symptoms, reasons,
+  times or amounts the patient hasn't mentioned.
+- Each reply: at most 8 words, polite, natural.
+- Make them different from each other; one may ask for clarification.
+Reply with JSON only: {"replies": [{"text_en": English reply, "text": the same reply in the listener's
+language (identical to text_en if English; Devanagari for Hindi, Telugu script for Telugu)}, ...]}"""
+
+SUMMARY_SYSTEM = """You write the record of a conversation between a Deaf patient (who signs in ISL) and a hearing
+doctor, nurse or receptionist in an Indian hospital, so it can be saved for later.
+Use only what is in the transcript. Do not add diagnoses or advice.
+Keep clear WHO said what: the patient's own statements vs. questions and instructions from the hearing person
+(e.g. "The doctor told the patient to go to the hospital immediately").
+Reply with JSON only: {"summary": 2-4 plain English sentences, "key_points": 2-6 short bullet strings
+(symptoms and since when, medicines, instructions given, follow-up, anything urgent)}."""
+
+
+async def suggest_replies(history: list[dict], listener_language: str) -> dict | None:
+    """-> {"replies": [{"text_en", "text"}, ...], "provider"} or None."""
+    if not available() or not history:
+        return None
+    lang = config.LANG_NAMES.get(listener_language, "English")
+    user = f"Last messages:\n{_history_block(history)}\n\nListener language: {lang}"
+    schema = {"type": "object",
+              "properties": {"replies": {"type": "array", "items": {
+                  "type": "object",
+                  "properties": {"text_en": {"type": "string"}, "text": {"type": "string"}},
+                  "required": ["text_en", "text"], "additionalProperties": False}}},
+              "required": ["replies"], "additionalProperties": False}
+
+    def validate(o: dict) -> dict | None:
+        out = []
+        for r in o.get("replies") or []:
+            en = str(r.get("text_en", "")).strip() if isinstance(r, dict) else ""
+            if not en or len(en) > 90 or en.lower() in {x["text_en"].lower() for x in out}:
+                continue
+            t = str(r.get("text", "")).strip() or en
+            out.append({"text_en": en, "text": en if listener_language == "en" else t})
+        return {"replies": out[:4]} if len(out) >= 2 else None
+
+    res = await _call(SUGGEST_SYSTEM, user, schema, validate)
+    return {**res[0], "provider": res[1]} if res else None
+
+
+async def summarize(transcript: list[dict]) -> dict | None:
+    """-> {"summary", "key_points": [...], "provider"} or None."""
+    if not available() or not transcript:
+        return None
+    lines = []
+    for t in transcript[-80:]:
+        who = "Patient (signed)" if t.get("from") == "signer" else "Hearing person"
+        lines.append(f"[{t.get('timestamp', '')[11:16]}] {who} ({t.get('emotion')}): "
+                     f"{t.get('sentence_en') or t.get('sentence') or t.get('content')}")
+    schema = {"type": "object",
+              "properties": {"summary": {"type": "string"},
+                             "key_points": {"type": "array", "items": {"type": "string"}}},
+              "required": ["summary", "key_points"], "additionalProperties": False}
+
+    def validate(o: dict) -> dict | None:
+        s = str(o.get("summary", "")).strip()
+        pts = [str(p).strip() for p in (o.get("key_points") or []) if str(p).strip()][:6]
+        return {"summary": s, "key_points": pts} if s else None
+
+    res = await _call(SUMMARY_SYSTEM, "Transcript:\n" + "\n".join(lines), schema, validate)
+    return {**res[0], "provider": res[1]} if res else None
