@@ -17,3 +17,4 @@ sign_service/models/mediapipe/
 *.part
 sign_service/data/old_webcam_close_varsh/
 sign_service/data/rejected_clips/
+sign_service/reports/live/

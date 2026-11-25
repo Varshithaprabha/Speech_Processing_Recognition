@@ -164,9 +164,10 @@ class Landmarker:
         sw = np.linalg.norm(pose[11, :2] - pose[12, :2])
         if np.isnan(sw) or sw <= 0:
             return
+        rest = (pose[11, 1] + pose[12, 1]) / 2 + 1.5 * sw          # well below the signing space
         for sl, (wi, ii) in ((LH_SL, (15, 19)), (RH_SL, (16, 20))):    # wrist, index knuckle (pose)
-            if not np.isnan(raw[sl][0]) or pose[wi, 3] < 0.5:
-                continue
+            if not np.isnan(raw[sl][0]) or pose[wi, 3] < 0.5 or pose[wi, 1] > rest:
+                continue                                    # hand found, unseen, or resting: skip (saves ~40 ms)
             wrist, idx = pose[wi, :2], pose[ii, :2]
             centre = wrist + (idx - wrist) * 1.5 if not np.isnan(idx).any() else wrist
             S = int(sw * 1.6 * H)

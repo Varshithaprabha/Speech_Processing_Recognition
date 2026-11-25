@@ -69,6 +69,8 @@ class ContinuousRecognizer:
         self._prev_pts = None
         self.status = "idle"                 # idle | signing
         self.last_word: tuple[str, float] | None = None
+        self.segments = 0                    # number of closed sign segments (for logging)
+        self.last_segment: dict | None = None
 
     def reset(self):
         self.st = _State()
@@ -140,16 +142,25 @@ class ContinuousRecognizer:
         st.frames, st.times, st.signing, st.still_since = [], [], False, None
         st.last_sign_end = t
         self.status = "idle"
-        if not times or times[-1] - times[0] < s.min_sign:
+        self.segments += 1
+        dur = (times[-1] - times[0]) if times else 0.0
+        seg = {"start": round(times[0], 2) if times else None, "dur": round(dur, 2)}
+        self.last_segment = seg
+        if not times or dur < s.min_sign:
+            seg["result"] = "too_short"
             return None
         raw = np.stack(frames)
         top = self.p.predict_raw(raw, top_k=3)
         gloss, conf = top[0]
+        seg["top"] = [[g, round(c, 3)] for g, c in top]
         self.last_word = (gloss, conf)
         if conf < s.min_conf:
+            seg["result"] = "low_conf"
             return None
         if s.dedupe and st.words and st.words[-1][0] == gloss:
+            seg["result"] = "repeat"
             return None
+        seg["result"] = "word"
         st.words.append((gloss, conf))
         return make_message("gloss_partial", [w for w, _ in st.words], conf,
                             words=[{"gloss": g, "confidence": round(c, 3)} for g, c in st.words],
