@@ -71,6 +71,12 @@ The container reaches sign_service at `host.docker.internal:8001`, Ollama at `ho
 and reads `../sign_service/clips` read-only. After editing `.env`: `docker compose up -d`. After changing
 code: `docker compose up -d --build`.
 
+**Part A on another laptop** (e.g. where Windows blocks MediaPipe on this one): run `python service.py`
+there, then put `SIGN_WS_URL=ws://<that-laptop-ip>:8001/ws` in this `.env` and run `docker compose up -d`.
+`/health` shows `"sign_service": true` once connected. In the app, set Settings → Connections → sign
+service to `http://<that-laptop-ip>:8001` for the camera preview. Both laptops must be on the same network,
+and that laptop's firewall must allow port 8001.
+
 **Without Docker:** `pip install -r requirements.txt` then `python service.py`
 (flags: `--no-llm`, `--no-sign`, `--preload-whisper`).
 

@@ -10,7 +10,9 @@ services:
       - path: .env              # ANTHROPIC_API_KEY etc. (optional)
         required: false
     environment:
-      SIGN_WS_URL: ws://host.docker.internal:8001/ws
+      # Part A's address. Default: running on this PC. To use Part A on another laptop
+      # (e.g. one where MediaPipe works), set SIGN_WS_URL=ws://<its-ip>:8001/ws in .env
+      SIGN_WS_URL: ${SIGN_WS_URL:-ws://host.docker.internal:8001/ws}
       OLLAMA_URL: http://host.docker.internal:11434     # Ollama runs on Windows
       WHISPER_MODEL: ${WHISPER_MODEL:-small}
     volumes:
